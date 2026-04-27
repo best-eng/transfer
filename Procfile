@@ -1,1 +1,1 @@
-worker: python transfer_bot.py
+worker: python bot.py
