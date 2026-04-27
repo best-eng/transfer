@@ -50,33 +50,28 @@ def phone_keyboard():
     btn = KeyboardButton("📱 Поделиться номером", request_contact=True)
     return ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
 
-def format_order(data: dict, user) -> str:
-    username = f"@{user.username}" if user.username else "нет username"
-    tg_link = f"tg://user?id={user.id}"
+def format_order(data, user):
+    username = "@" + user.username if user.username else "нет username"
+    tg_link = "tg://user?id=" + str(user.id)
     route_clean = data["route"].split(" ", 1)[1] if " " in data["route"] else data["route"]
-    return (
-        "🆕 <b>НОВАЯ ЗАЯВКА ПАССАЖИРА</b>
-
-"
-        f"🛣 <b>Маршрут:</b> {route_clean}
-"
-        f"📅 <b>Дата:</b> {data['date']} ({data['time']})
-"
-        f"👥 <b>Мест:</b> {data['seats']}
-"
-        f"📞 <b>Телефон:</b> {data['phone']}
-"
-        f"👤 <b>Пассажир:</b> <a href='{tg_link}'>{username}</a>"
-    )
+    lines = [
+        "🆕 <b>НОВАЯ ЗАЯВКА ПАССАЖИРА</b>",
+        "",
+        "🛣 <b>Маршрут:</b> " + route_clean,
+        "📅 <b>Дата:</b> " + data["date"] + " (" + data["time"] + ")",
+        "👥 <b>Мест:</b> " + data["seats"],
+        "📞 <b>Телефон:</b> " + data["phone"],
+        "👤 <b>Пассажир:</b> <a href='" + tg_link + "'>" + username + "</a>",
+    ]
+    return "\n".join(lines)
 
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data.clear()
     await update.message.reply_text(
-        "👋 Привет! Я помогу оформить заявку на трансфер.
-
-Выберите <b>направление</b>:",
-        parse_mode="HTML", reply_markup=route_keyboard(),
+        "👋 Привет! Я помогу оформить заявку на трансфер.\n\nВыберите <b>направление</b>:",
+        parse_mode="HTML",
+        reply_markup=route_keyboard(),
     )
     return STEP_ROUTE
 
@@ -87,9 +82,9 @@ async def step_route(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return STEP_ROUTE
     ctx.user_data["route"] = text
     await update.message.reply_text(
-        "📅 Введите <b>дату поездки</b> в формате <code>ДД.ММ.ГГГГ</code>
-Например: <code>26.04.2026</code>",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
+        "📅 Введите <b>дату поездки</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardRemove(),
     )
     return STEP_DATE
 
@@ -99,11 +94,13 @@ async def step_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         dt = datetime.strptime(text, "%d.%m.%Y")
         ctx.user_data["date"] = dt.strftime("%Y-%m-%d")
     except ValueError:
-        await update.message.reply_text("❗ Неверный формат. Введите дату как <code>26.04.2026</code>:", parse_mode="HTML")
+        await update.message.reply_text(
+            "❗ Неверный формат. Введите дату как <code>26.04.2026</code>:",
+            parse_mode="HTML",
+        )
         return STEP_DATE
     await update.message.reply_text(
-        "🕐 Введите <b>время выезда</b> в формате <code>ЧЧ:ММ</code>
-Например: <code>07:30</code>",
+        "🕐 Введите <b>время выезда</b> в формате <code>ЧЧ:ММ</code>\nНапример: <code>07:30</code>",
         parse_mode="HTML",
     )
     return STEP_TIME
@@ -114,9 +111,16 @@ async def step_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         t = datetime.strptime(text, "%H:%M")
         ctx.user_data["time"] = t.strftime("%H:%M")
     except ValueError:
-        await update.message.reply_text("❗ Неверный формат. Введите время как <code>07:30</code>:", parse_mode="HTML")
+        await update.message.reply_text(
+            "❗ Неверный формат. Введите время как <code>07:30</code>:",
+            parse_mode="HTML",
+        )
         return STEP_TIME
-    await update.message.reply_text("👥 Сколько <b>мест</b> нужно?", parse_mode="HTML", reply_markup=seats_keyboard())
+    await update.message.reply_text(
+        "👥 Сколько <b>мест</b> нужно?",
+        parse_mode="HTML",
+        reply_markup=seats_keyboard(),
+    )
     return STEP_SEATS
 
 async def step_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -127,14 +131,16 @@ async def step_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["seats"] = text
     await update.message.reply_text(
         "📞 Введите ваш <b>номер телефона</b> или нажмите кнопку ниже:",
-        parse_mode="HTML", reply_markup=phone_keyboard(),
+        parse_mode="HTML",
+        reply_markup=phone_keyboard(),
     )
     return STEP_PHONE
 
 async def step_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if update.message.contact:
         phone = update.message.contact.phone_number
-        if not phone.startswith("+"): phone = "+" + phone
+        if not phone.startswith("+"):
+            phone = "+" + phone
         ctx.user_data["phone"] = phone
     else:
         phone = update.message.text.strip()
@@ -142,33 +148,37 @@ async def step_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if not digits.isdigit() or len(digits) < 10:
             await update.message.reply_text(
                 "❗ Некорректный номер. Введите телефон, например: <code>+79161234567</code>",
-                parse_mode="HTML", reply_markup=phone_keyboard(),
+                parse_mode="HTML",
+                reply_markup=phone_keyboard(),
             )
             return STEP_PHONE
         ctx.user_data["phone"] = phone
     d = ctx.user_data
     route_clean = d["route"].split(" ", 1)[1] if " " in d["route"] else d["route"]
-    summary = (
-        "📋 <b>Ваша заявка:</b>
-
-"
-        f"🛣 <b>Маршрут:</b> {route_clean}
-"
-        f"📅 <b>Дата:</b> {d['date']} ({d['time']})
-"
-        f"👥 <b>Мест:</b> {d['seats']}
-"
-        f"📞 <b>Телефон:</b> {d['phone']}
-
-Всё верно?"
+    lines = [
+        "📋 <b>Ваша заявка:</b>",
+        "",
+        "🛣 <b>Маршрут:</b> " + route_clean,
+        "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
+        "👥 <b>Мест:</b> " + d["seats"],
+        "📞 <b>Телефон:</b> " + d["phone"],
+        "",
+        "Всё верно?",
+    ]
+    await update.message.reply_text(
+        "\n".join(lines),
+        parse_mode="HTML",
+        reply_markup=confirm_keyboard(),
     )
-    await update.message.reply_text(summary, parse_mode="HTML", reply_markup=confirm_keyboard())
     return STEP_CONFIRM
 
 async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if "Отменить" in text:
-        await update.message.reply_text("❌ Заявка отменена. Чтобы начать заново — /start", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text(
+            "❌ Заявка отменена. Чтобы начать заново — /start",
+            reply_markup=ReplyKeyboardRemove(),
+        )
         ctx.user_data.clear()
         return ConversationHandler.END
     if "Подтвердить" not in text:
@@ -180,20 +190,20 @@ async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         try:
             await ctx.bot.send_message(chat_id=admin_id, text=order_text, parse_mode="HTML")
         except Exception as e:
-            logger.error(f"Не удалось отправить заявку администратору {admin_id}: {e}")
+            logger.error("Не удалось отправить заявку администратору %s: %s", admin_id, e)
     await update.message.reply_text(
-        "✅ <b>Заявка принята!</b>
-
-Ожидайте подтверждения от диспетчера.
-
-Чтобы оформить новую заявку — /start",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
+        "✅ <b>Заявка принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardRemove(),
     )
     ctx.user_data.clear()
     return ConversationHandler.END
 
 async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🚫 Оформление отменено. Напишите /start чтобы начать заново.", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text(
+        "🚫 Оформление отменено. Напишите /start чтобы начать заново.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
     ctx.user_data.clear()
     return ConversationHandler.END
 
@@ -222,4 +232,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
