@@ -3,5 +3,5 @@
 # ─────────────────────────────────────────────
 
 BOT_TOKEN = "8759629143:AAEZlGmWYS5A029iYb78A_FBcdVUsMjPbEs"          # токен от @BotFather
-ADMIN_CHAT_IDS = [1705268401]               # ваш chat_id от @userinfobot
+ADMIN_CHAT_IDS = [1445696823]               # ваш chat_id от @userinfobot
                                            # несколько: [111111111, 222222222]
