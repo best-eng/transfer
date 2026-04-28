@@ -17,7 +17,6 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ── Шаги диалога ──
 (
     MENU,
     STEP_ROUTE,
@@ -51,13 +50,10 @@ logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=lo
 logger = logging.getLogger(__name__)
 
 
-# ── Клавиатуры ──
-
 def main_menu_keyboard():
     return ReplyKeyboardMarkup(
         [["🚗 Заказать трансфер"], ["🚐 Арендовать машину"]],
-        resize_keyboard=True,
-        one_time_keyboard=True,
+        resize_keyboard=True, one_time_keyboard=True,
     )
 
 def route_keyboard():
@@ -67,29 +63,18 @@ def rent_keyboard():
     return ReplyKeyboardMarkup([[r] for r in RENT_OPTIONS], resize_keyboard=True, one_time_keyboard=True)
 
 def transfer_seats_keyboard():
-    return ReplyKeyboardMarkup(
-        [["1", "2", "3"], ["4", "5", "6+"]],
-        resize_keyboard=True, one_time_keyboard=True,
-    )
+    return ReplyKeyboardMarkup([["1", "2", "3"], ["4", "5", "6+"]], resize_keyboard=True, one_time_keyboard=True)
 
 def rent_seats_keyboard():
-    return ReplyKeyboardMarkup(
-        [["4", "6", "8"]],
-        resize_keyboard=True, one_time_keyboard=True,
-    )
+    return ReplyKeyboardMarkup([["4", "6", "8"]], resize_keyboard=True, one_time_keyboard=True)
 
 def confirm_keyboard():
-    return ReplyKeyboardMarkup(
-        [["✅ Подтвердить", "❌ Отменить"]],
-        resize_keyboard=True, one_time_keyboard=True,
-    )
+    return ReplyKeyboardMarkup([["✅ Подтвердить", "❌ Отменить"]], resize_keyboard=True, one_time_keyboard=True)
 
 def phone_keyboard():
     btn = KeyboardButton("📱 Поделиться номером", request_contact=True)
     return ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
 
-
-# ── Форматирование ──
 
 def format_transfer(data, user):
     username = "@" + user.username if user.username else "нет username"
@@ -124,42 +109,23 @@ def format_rent(data, user):
     return "\n".join(lines)
 
 
-# ══════════════════════════════════════════
-# ГЛАВНОЕ МЕНЮ
-# ══════════════════════════════════════════
-
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data.clear()
-    await update.message.reply_text(
-        "👋 Привет! Выберите тип заявки:",
-        reply_markup=main_menu_keyboard(),
-    )
+    await update.message.reply_text("👋 Привет! Выберите тип заявки:", reply_markup=main_menu_keyboard())
     return MENU
 
 async def menu_choice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "🚗 Заказать трансфер":
-        await update.message.reply_text(
-            "Выберите <b>маршрут</b>:",
-            parse_mode="HTML",
-            reply_markup=route_keyboard(),
-        )
+        await update.message.reply_text("Выберите <b>маршрут</b>:", parse_mode="HTML", reply_markup=route_keyboard())
         return STEP_ROUTE
     elif text == "🚐 Арендовать машину":
-        await update.message.reply_text(
-            "Выберите <b>вариант аренды</b>:",
-            parse_mode="HTML",
-            reply_markup=rent_keyboard(),
-        )
+        await update.message.reply_text("Выберите <b>вариант аренды</b>:", parse_mode="HTML", reply_markup=rent_keyboard())
         return RENT_SIZE
     else:
         await update.message.reply_text("Пожалуйста, выберите действие 👇", reply_markup=main_menu_keyboard())
         return MENU
 
-
-# ══════════════════════════════════════════
-# ВЕТКА: ТРАНСФЕР
-# ══════════════════════════════════════════
 
 async def step_route(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -169,8 +135,7 @@ async def step_route(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["route"] = text
     await update.message.reply_text(
         "📅 Введите <b>дату поездки</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
     )
     return STEP_DATE
 
@@ -196,11 +161,7 @@ async def step_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите время как <code>07:30</code>:", parse_mode="HTML")
         return STEP_TIME
-    await update.message.reply_text(
-        "👥 Сколько <b>мест</b> нужно?",
-        parse_mode="HTML",
-        reply_markup=transfer_seats_keyboard(),
-    )
+    await update.message.reply_text("👥 Сколько <b>мест</b> нужно?", parse_mode="HTML", reply_markup=transfer_seats_keyboard())
     return STEP_SEATS
 
 async def step_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -209,43 +170,32 @@ async def step_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Выберите количество мест 👇", reply_markup=transfer_seats_keyboard())
         return STEP_SEATS
     ctx.user_data["seats"] = text
-    await update.message.reply_text(
-        "📞 Введите ваш <b>номер телефона</b> или нажмите кнопку ниже:",
-        parse_mode="HTML",
-        reply_markup=phone_keyboard(),
-    )
+    await update.message.reply_text("📞 Введите ваш <b>номер телефона</b> или нажмите кнопку ниже:", parse_mode="HTML", reply_markup=phone_keyboard())
     return STEP_PHONE
 
 async def step_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if update.message.contact:
         phone = update.message.contact.phone_number
-        if not phone.startswith("+"):
-            phone = "+" + phone
+        if not phone.startswith("+"): phone = "+" + phone
         ctx.user_data["phone"] = phone
     else:
         phone = update.message.text.strip()
         digits = phone.replace("+", "").replace(" ", "").replace("-", "")
         if not digits.isdigit() or len(digits) < 10:
-            await update.message.reply_text(
-                "❗ Некорректный номер. Введите телефон, например: <code>+79161234567</code>",
-                parse_mode="HTML",
-                reply_markup=phone_keyboard(),
-            )
+            await update.message.reply_text("❗ Некорректный номер. Например: <code>+79161234567</code>", parse_mode="HTML", reply_markup=phone_keyboard())
             return STEP_PHONE
         ctx.user_data["phone"] = phone
     d = ctx.user_data
     route_clean = d["route"].split(" ", 1)[1] if " " in d["route"] else d["route"]
-    lines = [
-        "📋 <b>Ваша заявка (трансфер):</b>",
-        "",
+    summary = "\n".join([
+        "📋 <b>Ваша заявка (трансфер):</b>", "",
         "🛣 <b>Маршрут:</b> " + route_clean,
         "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
         "👥 <b>Мест:</b> " + d["seats"],
-        "📞 <b>Телефон:</b> " + d["phone"],
-        "",
+        "📞 <b>Телефон:</b> " + d["phone"], "",
         "Всё верно?",
-    ]
-    await update.message.reply_text("\n".join(lines), parse_mode="HTML", reply_markup=confirm_keyboard())
+    ])
+    await update.message.reply_text(summary, parse_mode="HTML", reply_markup=confirm_keyboard())
     return STEP_CONFIRM
 
 async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -265,16 +215,11 @@ async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             logger.error("Ошибка отправки %s: %s", admin_id, e)
     await update.message.reply_text(
         "✅ <b>Заявка принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
     )
     ctx.user_data.clear()
     return ConversationHandler.END
 
-
-# ══════════════════════════════════════════
-# ВЕТКА: АРЕНДА
-# ══════════════════════════════════════════
 
 async def rent_size(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -287,8 +232,7 @@ async def rent_size(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["rent_seats_max"] = seats_count
     await update.message.reply_text(
         "📅 Введите <b>дату аренды</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
     )
     return RENT_DATE
 
@@ -314,11 +258,7 @@ async def rent_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите время как <code>07:30</code>:", parse_mode="HTML")
         return RENT_TIME
-    await update.message.reply_text(
-        "👥 Сколько <b>пассажиров</b>?",
-        parse_mode="HTML",
-        reply_markup=rent_seats_keyboard(),
-    )
+    await update.message.reply_text("👥 Сколько <b>пассажиров</b>?", parse_mode="HTML", reply_markup=rent_seats_keyboard())
     return RENT_SEATS
 
 async def rent_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -327,43 +267,32 @@ async def rent_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Выберите количество пассажиров 👇", reply_markup=rent_seats_keyboard())
         return RENT_SEATS
     ctx.user_data["seats"] = text
-    await update.message.reply_text(
-        "📞 Введите ваш <b>номер телефона</b> или нажмите кнопку ниже:",
-        parse_mode="HTML",
-        reply_markup=phone_keyboard(),
-    )
+    await update.message.reply_text("📞 Введите ваш <b>номер телефона</b> или нажмите кнопку ниже:", parse_mode="HTML", reply_markup=phone_keyboard())
     return RENT_PHONE
 
 async def rent_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if update.message.contact:
         phone = update.message.contact.phone_number
-        if not phone.startswith("+"):
-            phone = "+" + phone
+        if not phone.startswith("+"): phone = "+" + phone
         ctx.user_data["phone"] = phone
     else:
         phone = update.message.text.strip()
         digits = phone.replace("+", "").replace(" ", "").replace("-", "")
         if not digits.isdigit() or len(digits) < 10:
-            await update.message.reply_text(
-                "❗ Некорректный номер. Введите телефон, например: <code>+79161234567</code>",
-                parse_mode="HTML",
-                reply_markup=phone_keyboard(),
-            )
+            await update.message.reply_text("❗ Некорректный номер. Например: <code>+79161234567</code>", parse_mode="HTML", reply_markup=phone_keyboard())
             return RENT_PHONE
         ctx.user_data["phone"] = phone
     d = ctx.user_data
-    lines = [
-        "📋 <b>Ваша заявка (аренда):</b>",
-        "",
+    summary = "\n".join([
+        "📋 <b>Ваша заявка (аренда):</b>", "",
         "🚐 <b>Вариант:</b> " + d["rent_option"],
         "💰 <b>Стоимость:</b> " + str(d["rent_price"]) + " ₽",
         "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
         "👥 <b>Пассажиров:</b> " + d["seats"],
-        "📞 <b>Телефон:</b> " + d["phone"],
-        "",
+        "📞 <b>Телефон:</b> " + d["phone"], "",
         "Всё верно?",
-    ]
-    await update.message.reply_text("\n".join(lines), parse_mode="HTML", reply_markup=confirm_keyboard())
+    ])
+    await update.message.reply_text(summary, parse_mode="HTML", reply_markup=confirm_keyboard())
     return RENT_CONFIRM
 
 async def rent_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -383,33 +312,20 @@ async def rent_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             logger.error("Ошибка отправки %s: %s", admin_id, e)
     await update.message.reply_text(
         "✅ <b>Заявка на аренду принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
-        parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
     )
     ctx.user_data.clear()
     return ConversationHandler.END
 
-
-# ══════════════════════════════════════════
-# ОТМЕНА
-# ══════════════════════════════════════════
 
 async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🚫 Оформление отменено. Напишите /start чтобы начать заново.",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    await update.message.reply_text("🚫 Оформление отменено. Напишите /start чтобы начать заново.", reply_markup=ReplyKeyboardRemove())
     ctx.user_data.clear()
     return ConversationHandler.END
 
-
-# ══════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
-
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -435,7 +351,6 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
-
     app.add_handler(conv)
     logger.info("Бот запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
