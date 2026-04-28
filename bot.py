@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Telegram бот для заказа трансфера Йошкар-Ола <-> Казань
-"""
+"""Telegram бот для заказа трансфера Йошкар-Ола <-> Казань"""
 
 import logging
 from datetime import datetime
@@ -9,28 +7,12 @@ from config import BOT_TOKEN, ADMIN_CHAT_IDS
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ConversationHandler,
-    filters,
-    ContextTypes,
+    Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes,
 )
 
 (
-    MENU,
-    STEP_ROUTE,
-    STEP_DATE,
-    STEP_TIME,
-    STEP_SEATS,
-    STEP_PHONE,
-    STEP_CONFIRM,
-    RENT_SIZE,
-    RENT_DATE,
-    RENT_TIME,
-    RENT_SEATS,
-    RENT_PHONE,
-    RENT_CONFIRM,
+    MENU, STEP_ROUTE, STEP_DATE, STEP_TIME, STEP_SEATS, STEP_PHONE, STEP_CONFIRM,
+    RENT_SIZE, RENT_DATE, RENT_TIME, RENT_SEATS, RENT_PHONE, RENT_CONFIRM,
 ) = range(13)
 
 ROUTES = [
@@ -51,10 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def main_menu_keyboard():
-    return ReplyKeyboardMarkup(
-        [["🚗 Заказать трансфер"], ["🚐 Арендовать машину"]],
-        resize_keyboard=True, one_time_keyboard=True,
-    )
+    return ReplyKeyboardMarkup([["🚗 Заказать трансфер"], ["🚐 Арендовать машину"]], resize_keyboard=True, one_time_keyboard=True)
 
 def route_keyboard():
     return ReplyKeyboardMarkup([[r] for r in ROUTES], resize_keyboard=True, one_time_keyboard=True)
@@ -91,6 +70,7 @@ def format_transfer(data, user):
         "👤 <b>Пассажир:</b> <a href='" + tg_link + "'>" + username + "</a>",
     ]
     return "\n".join(lines)
+
 
 def format_rent(data, user):
     username = "@" + user.username if user.username else "нет username"
@@ -133,10 +113,7 @@ async def step_route(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, выберите маршрут из списка 👇", reply_markup=route_keyboard())
         return STEP_ROUTE
     ctx.user_data["route"] = text
-    await update.message.reply_text(
-        "📅 Введите <b>дату поездки</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
-    )
+    await update.message.reply_text("📅 Введите <b>дату поездки</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
     return STEP_DATE
 
 async def step_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -147,10 +124,7 @@ async def step_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите дату как <code>26.04.2026</code>:", parse_mode="HTML")
         return STEP_DATE
-    await update.message.reply_text(
-        "🕐 Введите <b>время выезда</b> в формате <code>ЧЧ:ММ</code>\nНапример: <code>07:30</code>",
-        parse_mode="HTML",
-    )
+    await update.message.reply_text("🕐 Введите <b>время выезда</b> в формате <code>ЧЧ:ММ</code>\nНапример: <code>07:30</code>", parse_mode="HTML")
     return STEP_TIME
 
 async def step_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -192,8 +166,7 @@ async def step_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "🛣 <b>Маршрут:</b> " + route_clean,
         "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
         "👥 <b>Мест:</b> " + d["seats"],
-        "📞 <b>Телефон:</b> " + d["phone"], "",
-        "Всё верно?",
+        "📞 <b>Телефон:</b> " + d["phone"], "", "Всё верно?",
     ])
     await update.message.reply_text(summary, parse_mode="HTML", reply_markup=confirm_keyboard())
     return STEP_CONFIRM
@@ -208,15 +181,14 @@ async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, нажмите одну из кнопок:", reply_markup=confirm_keyboard())
         return STEP_CONFIRM
     user = update.effective_user
+    logger.info("=== ТРАНСФЕР | admin_ids=%s | user_id=%s ===", ADMIN_CHAT_IDS, user.id)
     for admin_id in ADMIN_CHAT_IDS:
         try:
             await ctx.bot.send_message(chat_id=admin_id, text=format_transfer(ctx.user_data, user), parse_mode="HTML")
+            logger.info("✅ Отправлено администратору %s", admin_id)
         except Exception as e:
-            logger.error("Ошибка отправки %s: %s", admin_id, e)
-    await update.message.reply_text(
-        "✅ <b>Заявка принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
-    )
+            logger.error("❌ Ошибка отправки %s: %s", admin_id, e)
+    await update.message.reply_text("✅ <b>Заявка принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
     ctx.user_data.clear()
     return ConversationHandler.END
 
@@ -230,10 +202,7 @@ async def rent_size(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["rent_option"] = text
     ctx.user_data["rent_price"] = price
     ctx.user_data["rent_seats_max"] = seats_count
-    await update.message.reply_text(
-        "📅 Введите <b>дату аренды</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
-    )
+    await update.message.reply_text("📅 Введите <b>дату аренды</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
     return RENT_DATE
 
 async def rent_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -244,10 +213,7 @@ async def rent_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите дату как <code>26.04.2026</code>:", parse_mode="HTML")
         return RENT_DATE
-    await update.message.reply_text(
-        "🕐 Введите <b>время подачи</b> в формате <code>ЧЧ:ММ</code>\nНапример: <code>07:30</code>",
-        parse_mode="HTML",
-    )
+    await update.message.reply_text("🕐 Введите <b>время подачи</b> в формате <code>ЧЧ:ММ</code>\nНапример: <code>07:30</code>", parse_mode="HTML")
     return RENT_TIME
 
 async def rent_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -289,8 +255,7 @@ async def rent_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "💰 <b>Стоимость:</b> " + str(d["rent_price"]) + " ₽",
         "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
         "👥 <b>Пассажиров:</b> " + d["seats"],
-        "📞 <b>Телефон:</b> " + d["phone"], "",
-        "Всё верно?",
+        "📞 <b>Телефон:</b> " + d["phone"], "", "Всё верно?",
     ])
     await update.message.reply_text(summary, parse_mode="HTML", reply_markup=confirm_keyboard())
     return RENT_CONFIRM
@@ -305,15 +270,14 @@ async def rent_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, нажмите одну из кнопок:", reply_markup=confirm_keyboard())
         return RENT_CONFIRM
     user = update.effective_user
+    logger.info("=== АРЕНДА | admin_ids=%s | user_id=%s ===", ADMIN_CHAT_IDS, user.id)
     for admin_id in ADMIN_CHAT_IDS:
         try:
             await ctx.bot.send_message(chat_id=admin_id, text=format_rent(ctx.user_data, user), parse_mode="HTML")
+            logger.info("✅ Отправлено администратору %s", admin_id)
         except Exception as e:
-            logger.error("Ошибка отправки %s: %s", admin_id, e)
-    await update.message.reply_text(
-        "✅ <b>Заявка на аренду принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
-        parse_mode="HTML", reply_markup=ReplyKeyboardRemove(),
-    )
+            logger.error("❌ Ошибка отправки %s: %s", admin_id, e)
+    await update.message.reply_text("✅ <b>Заявка на аренду принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
     ctx.user_data.clear()
     return ConversationHandler.END
 
@@ -327,29 +291,23 @@ async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     conv = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler('start', start)],
         states={
             MENU:         [MessageHandler(filters.TEXT & ~filters.COMMAND, menu_choice)],
             STEP_ROUTE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, step_route)],
             STEP_DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, step_date)],
             STEP_TIME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, step_time)],
             STEP_SEATS:   [MessageHandler(filters.TEXT & ~filters.COMMAND, step_seats)],
-            STEP_PHONE:   [
-                MessageHandler(filters.CONTACT, step_phone),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, step_phone),
-            ],
+            STEP_PHONE:   [MessageHandler(filters.CONTACT, step_phone), MessageHandler(filters.TEXT & ~filters.COMMAND, step_phone)],
             STEP_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, step_confirm)],
             RENT_SIZE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, rent_size)],
             RENT_DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, rent_date)],
             RENT_TIME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, rent_time)],
             RENT_SEATS:   [MessageHandler(filters.TEXT & ~filters.COMMAND, rent_seats)],
-            RENT_PHONE:   [
-                MessageHandler(filters.CONTACT, rent_phone),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, rent_phone),
-            ],
+            RENT_PHONE:   [MessageHandler(filters.CONTACT, rent_phone), MessageHandler(filters.TEXT & ~filters.COMMAND, rent_phone)],
             RENT_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, rent_confirm)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler('cancel', cancel)],
     )
     app.add_handler(conv)
     logger.info("Бот запущен...")
