@@ -17,25 +17,22 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ── Шаги: трансфер ──
+# ── Шаги диалога ──
 (
+    MENU,
     STEP_ROUTE,
     STEP_DATE,
     STEP_TIME,
     STEP_SEATS,
     STEP_PHONE,
     STEP_CONFIRM,
-) = range(6)
-
-# ── Шаги: аренда ──
-(
     RENT_SIZE,
     RENT_DATE,
     RENT_TIME,
     RENT_SEATS,
     RENT_PHONE,
     RENT_CONFIRM,
-) = range(10, 16)
+) = range(13)
 
 ROUTES = [
     "🚗 Йошкар-Ола → Казань (Саид Галеева 4)",
@@ -45,9 +42,9 @@ ROUTES = [
 ]
 
 RENT_OPTIONS = {
-    "🚐 4 места — 4 000 ₽": 4000,
-    "🚌 6 мест — 6 000 ₽": 6000,
-    "🚌 8 мест — 8 000 ₽": 8000,
+    "🚐 4 места — 4 000 ₽": (4, 4000),
+    "🚌 6 мест — 6 000 ₽": (6, 6000),
+    "🚌 8 мест — 8 000 ₽": (8, 8000),
 }
 
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO)
@@ -69,25 +66,38 @@ def route_keyboard():
 def rent_keyboard():
     return ReplyKeyboardMarkup([[r] for r in RENT_OPTIONS], resize_keyboard=True, one_time_keyboard=True)
 
-def seats_keyboard():
-    return ReplyKeyboardMarkup([["1", "2", "3"], ["4", "5", "6+"]], resize_keyboard=True, one_time_keyboard=True)
+def transfer_seats_keyboard():
+    return ReplyKeyboardMarkup(
+        [["1", "2", "3"], ["4", "5", "6+"]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
+
+def rent_seats_keyboard():
+    return ReplyKeyboardMarkup(
+        [["4", "6", "8"]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
 
 def confirm_keyboard():
-    return ReplyKeyboardMarkup([["✅ Подтвердить", "❌ Отменить"]], resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(
+        [["✅ Подтвердить", "❌ Отменить"]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
 
 def phone_keyboard():
     btn = KeyboardButton("📱 Поделиться номером", request_contact=True)
     return ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
 
 
-# ── Форматирование заявок ──
+# ── Форматирование ──
 
 def format_transfer(data, user):
     username = "@" + user.username if user.username else "нет username"
     tg_link = "tg://user?id=" + str(user.id)
     route_clean = data["route"].split(" ", 1)[1] if " " in data["route"] else data["route"]
     lines = [
-        "🆕 <b>НОВАЯ ЗАЯВКА — ТРАНСФЕР</b>",
+        "🆕 <b>НОВАЯ ЗАЯВКА</b>",
+        "📌 <b>Тип:</b> Трансфер",
         "",
         "🛣 <b>Маршрут:</b> " + route_clean,
         "📅 <b>Дата:</b> " + data["date"] + " (" + data["time"] + ")",
@@ -101,7 +111,8 @@ def format_rent(data, user):
     username = "@" + user.username if user.username else "нет username"
     tg_link = "tg://user?id=" + str(user.id)
     lines = [
-        "🆕 <b>НОВАЯ ЗАЯВКА — АРЕНДА МАШИНЫ</b>",
+        "🆕 <b>НОВАЯ ЗАЯВКА</b>",
+        "📌 <b>Тип:</b> Аренда машины",
         "",
         "🚐 <b>Вариант:</b> " + data["rent_option"],
         "💰 <b>Стоимость:</b> " + str(data["rent_price"]) + " ₽",
@@ -123,9 +134,9 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "👋 Привет! Выберите тип заявки:",
         reply_markup=main_menu_keyboard(),
     )
-    return STEP_ROUTE
+    return MENU
 
-async def main_menu_choice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def menu_choice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "🚗 Заказать трансфер":
         await update.message.reply_text(
@@ -143,7 +154,7 @@ async def main_menu_choice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return RENT_SIZE
     else:
         await update.message.reply_text("Пожалуйста, выберите действие 👇", reply_markup=main_menu_keyboard())
-        return STEP_ROUTE
+        return MENU
 
 
 # ══════════════════════════════════════════
@@ -185,13 +196,17 @@ async def step_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите время как <code>07:30</code>:", parse_mode="HTML")
         return STEP_TIME
-    await update.message.reply_text("👥 Сколько <b>мест</b> нужно?", parse_mode="HTML", reply_markup=seats_keyboard())
+    await update.message.reply_text(
+        "👥 Сколько <b>мест</b> нужно?",
+        parse_mode="HTML",
+        reply_markup=transfer_seats_keyboard(),
+    )
     return STEP_SEATS
 
 async def step_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if text not in ["1", "2", "3", "4", "5", "6+"]:
-        await update.message.reply_text("Выберите количество мест 👇", reply_markup=seats_keyboard())
+        await update.message.reply_text("Выберите количество мест 👇", reply_markup=transfer_seats_keyboard())
         return STEP_SEATS
     ctx.user_data["seats"] = text
     await update.message.reply_text(
@@ -221,7 +236,7 @@ async def step_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     d = ctx.user_data
     route_clean = d["route"].split(" ", 1)[1] if " " in d["route"] else d["route"]
     lines = [
-        "📋 <b>Ваша заявка:</b>",
+        "📋 <b>Ваша заявка (трансфер):</b>",
         "",
         "🛣 <b>Маршрут:</b> " + route_clean,
         "📅 <b>Дата:</b> " + d["date"] + " (" + d["time"] + ")",
@@ -243,12 +258,11 @@ async def step_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, нажмите одну из кнопок:", reply_markup=confirm_keyboard())
         return STEP_CONFIRM
     user = update.effective_user
-    order_text = format_transfer(ctx.user_data, user)
     for admin_id in ADMIN_CHAT_IDS:
         try:
-            await ctx.bot.send_message(chat_id=admin_id, text=order_text, parse_mode="HTML")
+            await ctx.bot.send_message(chat_id=admin_id, text=format_transfer(ctx.user_data, user), parse_mode="HTML")
         except Exception as e:
-            logger.error("Ошибка отправки администратору %s: %s", admin_id, e)
+            logger.error("Ошибка отправки %s: %s", admin_id, e)
     await update.message.reply_text(
         "✅ <b>Заявка принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
         parse_mode="HTML",
@@ -267,8 +281,10 @@ async def rent_size(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if text not in RENT_OPTIONS:
         await update.message.reply_text("Пожалуйста, выберите вариант из списка 👇", reply_markup=rent_keyboard())
         return RENT_SIZE
-    ctx.user_data["rent_option"] = text.split(" — ")[0].strip()
-    ctx.user_data["rent_price"] = RENT_OPTIONS[text]
+    seats_count, price = RENT_OPTIONS[text]
+    ctx.user_data["rent_option"] = text
+    ctx.user_data["rent_price"] = price
+    ctx.user_data["rent_seats_max"] = seats_count
     await update.message.reply_text(
         "📅 Введите <b>дату аренды</b> в формате <code>ДД.ММ.ГГГГ</code>\nНапример: <code>26.04.2026</code>",
         parse_mode="HTML",
@@ -298,13 +314,17 @@ async def rent_time(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❗ Неверный формат. Введите время как <code>07:30</code>:", parse_mode="HTML")
         return RENT_TIME
-    await update.message.reply_text("👥 Сколько <b>пассажиров</b>?", parse_mode="HTML", reply_markup=seats_keyboard())
+    await update.message.reply_text(
+        "👥 Сколько <b>пассажиров</b>?",
+        parse_mode="HTML",
+        reply_markup=rent_seats_keyboard(),
+    )
     return RENT_SEATS
 
 async def rent_seats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
-    if text not in ["1", "2", "3", "4", "5", "6+"]:
-        await update.message.reply_text("Выберите количество пассажиров 👇", reply_markup=seats_keyboard())
+    if text not in ["4", "6", "8"]:
+        await update.message.reply_text("Выберите количество пассажиров 👇", reply_markup=rent_seats_keyboard())
         return RENT_SEATS
     ctx.user_data["seats"] = text
     await update.message.reply_text(
@@ -333,7 +353,7 @@ async def rent_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         ctx.user_data["phone"] = phone
     d = ctx.user_data
     lines = [
-        "📋 <b>Ваша заявка на аренду:</b>",
+        "📋 <b>Ваша заявка (аренда):</b>",
         "",
         "🚐 <b>Вариант:</b> " + d["rent_option"],
         "💰 <b>Стоимость:</b> " + str(d["rent_price"]) + " ₽",
@@ -356,12 +376,11 @@ async def rent_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, нажмите одну из кнопок:", reply_markup=confirm_keyboard())
         return RENT_CONFIRM
     user = update.effective_user
-    order_text = format_rent(ctx.user_data, user)
     for admin_id in ADMIN_CHAT_IDS:
         try:
-            await ctx.bot.send_message(chat_id=admin_id, text=order_text, parse_mode="HTML")
+            await ctx.bot.send_message(chat_id=admin_id, text=format_rent(ctx.user_data, user), parse_mode="HTML")
         except Exception as e:
-            logger.error("Ошибка отправки администратору %s: %s", admin_id, e)
+            logger.error("Ошибка отправки %s: %s", admin_id, e)
     await update.message.reply_text(
         "✅ <b>Заявка на аренду принята!</b>\n\nОжидайте подтверждения от диспетчера.\n\nЧтобы оформить новую заявку — /start",
         parse_mode="HTML",
@@ -391,13 +410,10 @@ async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Диалог трансфер
-    transfer_conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("start", start),
-            MessageHandler(filters.Regex("^🚗 Заказать трансфер$"), step_route),
-        ],
+    conv = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
         states={
+            MENU:         [MessageHandler(filters.TEXT & ~filters.COMMAND, menu_choice)],
             STEP_ROUTE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, step_route)],
             STEP_DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, step_date)],
             STEP_TIME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, step_time)],
@@ -420,7 +436,7 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    app.add_handler(transfer_conv)
+    app.add_handler(conv)
     logger.info("Бот запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
