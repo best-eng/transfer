@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Посылка</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#1c1c1e;--card:#2c2c2e;--inp:#3a3a3c;--acc:#0a84ff;--txt:#fff;--sub:#aeaeb2;--brd:#48484a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px 16px 100px}
+h1{font-size:21px;font-weight:700;margin-bottom:3px}
+.sub{font-size:13px;color:var(--sub);margin-bottom:22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field textarea,.field select{width:100%;background:var(--inp);border:1.5px solid var(--brd);border-radius:12px;padding:13px 14px;color:var(--txt);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--acc)}
+.field textarea{resize:none;height:74px}
+.seg{display:flex;background:var(--inp);border-radius:12px;padding:3px;gap:3px}
+.seg input{display:none}
+.seg label{flex:1;text-align:center;padding:9px 3px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;color:var(--sub);transition:all .15s}
+.seg input:checked+label{background:var(--acc);color:#fff}
+/* Календарь */
+#calWrap{background:var(--inp);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden}
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--brd)}
+.cal-head span{font-weight:700;font-size:15px}
+.cal-head button{background:none;border:none;color:var(--acc);font-size:26px;line-height:1;cursor:pointer;padding:0 6px;touch-action:manipulation}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:6px}
+.cal-dow{text-align:center;font-size:11px;color:var(--sub);font-weight:600;padding:4px 0}
+.cal-d{text-align:center;padding:9px 2px;border-radius:8px;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cal-d.past{color:var(--brd);pointer-events:none}
+.cal-d.today{color:var(--acc);font-weight:700}
+.cal-d.sel{background:var(--acc);color:#fff;border-radius:8px}
+.cal-foot{padding:8px 14px;font-size:13px;color:var(--sub);border-top:1px solid var(--brd)}
+.cal-foot b{color:var(--txt)}
+/* Кнопка */
+.btn-submit{position:fixed;bottom:0;left:0;right:0;padding:17px;background:var(--acc);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.3px;-webkit-tap-highlight-color:transparent}
+.btn-submit:active{opacity:.85}
+.toast{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:99;border:1px solid #444}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<h1>📦 Посылка</h1>
+<p class="sub">Йошкар-Ола ↔ Казань</p>
+
+<div class="field"><label>🗺 Маршрут</label>
+<select id="p_route">
+<option value="">Выберите маршрут</option>
+<option>Йошкар-Ола → Казань (город)</option>
+<option>Йошкар-Ола → Казань (Аэропорт)</option>
+<option>Казань (Аэропорт) → Йошкар-Ола</option>
+<option>Казань (город) → Йошкар-Ола</option>
+</select></div>
+<div class="field"><label>📅 Дата отправки</label><div id="calWrap"></div></div>
+<div class="field"><label>🕐 Время</label><input type="time" id="p_time"></div>
+<div class="field"><label>📦 Что передаём?</label><input type="text" id="p_what" placeholder="Документы, коробка 2кг..."></div>
+<div class="field"><label>📞 Телефон отправителя</label><input type="tel" id="p_phone" placeholder="+7 (999) 000-00-00"></div>
+<div class="field"><label>👤 Кому / детали получателя</label><textarea id="p_det" placeholder="Телефон получателя, адрес..."></textarea></div>
+
+<button class="btn-submit" id="sbtn">ОТПРАВИТЬ ЗАЯВКУ</button>
+<div class="toast" id="toast"></div>
+<script>
+var tg=window.Telegram.WebApp;tg.ready();tg.expand();
+
+var MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+var DOW=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+var calY,calM,calSel=null;
+
+function p2(n){return n<10?'0'+n:String(n)}
+function todayMidnight(){var d=new Date();d.setHours(0,0,0,0);return d}
+
+function calDraw(){
+  var el=document.getElementById('calWrap');
+  if(!el)return;
+  var today=todayMidnight();
+  var first=new Date(calY,calM,1);
+  var last=new Date(calY,calM+1,0);
+  var dow=first.getDay();dow=dow===0?6:dow-1;
+
+  var h='<div class="cal-head">'
+   +'<button id="cPrev">&#8249;</button>'
+   +'<span>'+MONTHS[calM]+' '+calY+'</span>'
+   +'<button id="cNext">&#8250;</button>'
+   +'</div><div class="cal-body">';
+
+  DOW.forEach(function(d){h+='<div class="cal-dow">'+d+'</div>';});
+  for(var i=0;i<dow;i++)h+='<div></div>';
+  for(var d=1;d<=last.getDate();d++){
+    var dt=new Date(calY,calM,d);
+    var c='cal-d';
+    if(dt<today)c+=' past';
+    else if(dt.toDateString()===today.toDateString())c+=' today';
+    if(calSel&&dt.toDateString()===calSel.toDateString())c+=' sel';
+    h+='<div class="'+c+'" data-d="'+d+'">'+d+'</div>';
+  }
+  h+='</div>';
+  var ds=calSel?p2(calSel.getDate())+'.'+p2(calSel.getMonth()+1)+'.'+calSel.getFullYear():'не выбрана';
+  h+='<div class="cal-foot">Выбрано: <b>'+ds+'</b></div>';
+  el.innerHTML=h;
+
+  document.getElementById('cPrev').addEventListener('click',function(e){
+    e.preventDefault();calM--;if(calM<0){calM=11;calY--;}calDraw();
+  });
+  document.getElementById('cNext').addEventListener('click',function(e){
+    e.preventDefault();calM++;if(calM>11){calM=0;calY++;}calDraw();
+  });
+  el.querySelectorAll('.cal-d:not(.past)').forEach(function(cell){
+    cell.addEventListener('click',function(){
+      var day=parseInt(this.getAttribute('data-d'));
+      var dt=new Date(calY,calM,day);
+      if(dt<todayMidnight())return;
+      calSel=dt;calDraw();
+    });
+  });
+}
+
+function calInit(){
+  var n=new Date();calY=n.getFullYear();calM=n.getMonth();calDraw();
+}
+function calGetDate(){
+  if(!calSel)return null;
+  return p2(calSel.getDate())+'.'+p2(calSel.getMonth()+1)+'.'+calSel.getFullYear();
+}
+function radioVal(name){
+  var r=document.querySelector('input[name="'+name+'"]:checked');
+  return r?r.value:null;
+}
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  setTimeout(function(){t.classList.remove('on');},2200);
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  calInit();
+  document.getElementById('sbtn').addEventListener('click',function(){
+
+    var route=document.getElementById('p_route').value;
+    var date=calGetDate();
+    var time=document.getElementById('p_time').value;
+    var what=document.getElementById('p_what').value.trim();
+    var phone=document.getElementById('p_phone').value.trim();
+    var det=document.getElementById('p_det').value.trim();
+    if(!route)return toast('⚠️ Выберите маршрут');
+    if(!date) return toast('⚠️ Выберите дату');
+    if(!time) return toast('⚠️ Укажите время');
+    if(!what) return toast('⚠️ Опишите содержимое');
+    if(!phone)return toast('⚠️ Укажите телефон');
+    tg.sendData(JSON.stringify({type:'parcel',route:route,date:date,time:time,what:what,phone:phone,details:det}));
+
+  });
+});
+</script>
+</body>
+</html>
