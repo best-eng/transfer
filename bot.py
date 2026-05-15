@@ -9,18 +9,22 @@ logger = logging.getLogger(__name__)
 
 def kb():
     return ReplyKeyboardMarkup([
-        [KeyboardButton("📦 Отправить посылку\nЙ-Ола ↔ Казань",                          web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
-        [KeyboardButton("🔍 Найти поездку\nЙ-Ола ↔ Казань (центр и аэропорт)",            web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
-        [KeyboardButton("✈️ Заказать трансфер в аэропорт\nЙ-Ола ↔ Казань Аэропорт",       web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
-        [KeyboardButton("🚐 Индивидуальный трансфер минивэн\nЙ-Ола ↔ Казань Аэропорт",    web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
-        [KeyboardButton("🌍 Трансфер в любой город РФ минивэн",                             web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
+        [KeyboardButton("📦 Отправить посылку",             web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
+        [KeyboardButton("🔍 Найти поездку",                  web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
+        [KeyboardButton("✈️ Трансфер в аэропорт",            web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
+        [KeyboardButton("🚐 Индивидуальный трансфер",        web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
+        [KeyboardButton("🌍 Трансфер по РФ",                 web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
     ], resize_keyboard=True)
 
 async def post_init(app):
     await app.bot.delete_webhook(drop_pending_updates=True)
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Выберите тип заявки:", reply_markup=kb())
+    await update.message.reply_text(
+        "👋 <b>Трансфер Казань — Йошкар-Ола</b>\n\nВыберите тип заявки:",
+        parse_mode="HTML",
+        reply_markup=kb()
+    )
 
 async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     raw = update.message.web_app_data.data
@@ -34,7 +38,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     t = d.get("type","")
 
     if t == "parcel":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА</b>", "📌 <b>Тип:</b> Посылка", "",
+        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Посылка</b>", "",
                  "🛣 <b>Маршрут:</b> "+d.get("route",""),
                  "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
                  "📦 <b>Содержимое:</b> "+d.get("what",""),
@@ -43,7 +47,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
 
     elif t == "trip":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА</b>", "📌 <b>Тип:</b> Поездка (попутчики)", "",
+        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Поездка (попутчики)</b>", "",
                  "🛣 <b>Маршрут:</b> "+d.get("route",""),
                  "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
                  "👥 <b>Мест:</b> "+d.get("seats",""),
@@ -52,7 +56,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
 
     elif t == "airport":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА</b>", "📌 <b>Тип:</b> Трансфер в аэропорт", "",
+        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Трансфер в аэропорт</b>", "",
                  "🛣 <b>Маршрут:</b> "+d.get("route",""),
                  "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
                  "👥 <b>Мест:</b> "+d.get("seats",""),
@@ -61,7 +65,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
 
     elif t == "rent":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА</b>", "📌 <b>Тип:</b> Индивидуальный трансфер минивэн", "",
+        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Индивидуальный трансфер</b>", "",
                  "🚐 <b>Класс:</b> "+d.get("car_class",""),
                  "🛣 <b>Маршрут:</b> "+d.get("route",""),
                  "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
@@ -71,7 +75,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
 
     elif t == "transfer_rf":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА</b>", "📌 <b>Тип:</b> Трансфер по РФ минивэн", "",
+        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Трансфер по РФ</b>", "",
                  "🚐 <b>Класс:</b> "+d.get("car_class",""),
                  "🛣 <b>Откуда:</b> "+d.get("from",""),
                  "🛣 <b>Куда:</b> "+d.get("to",""),
@@ -92,7 +96,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ok = True
         except Exception as e: logger.error("❌ %s: %s", aid, e)
 
-    txt = "✅ <b>Заявка принята!</b>\n\nДиспетчер свяжется с вами." if ok else "⚠️ Ошибка. Позвоните нам."
+    txt = "✅ <b>Заявка принята!</b>\n\nДиспетчер свяжется с вами в ближайшее время." if ok else "⚠️ Ошибка отправки. Позвоните нам."
     await update.message.reply_text(txt, parse_mode="HTML", reply_markup=kb())
 
 def main():
