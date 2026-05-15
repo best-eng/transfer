@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
 import json, logging
 from config import BOT_TOKEN, ADMIN_CHAT_IDS, WEBAPP_URL
-from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ─── Inline-клавиатура с цветными эмодзи-кнопками ───────────────────────────
 def main_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔴 Отправить посылку",              web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
-        [InlineKeyboardButton("🔵 Найти поездку",                   web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
-        [InlineKeyboardButton("🟢 Трансфер в аэропорт",             web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
-        [InlineKeyboardButton("🟡 Индивидуальный трансфер",         web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
-        [InlineKeyboardButton("⚫ Трансфер по всей РФ",             web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
-    ])
+    return ReplyKeyboardMarkup([
+        [KeyboardButton("📦 Отправить посылку\nЙ-Ола ➡️ Казань",                     web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
+        [KeyboardButton("🔍 Найти поездку\nЙ-Ола ➡️ Казань (центр и аэропорт)",      web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
+        [KeyboardButton("✈️ Заказать трансфер в аэропорт\nЙ-Ола ➡️ Казань Аэропорт", web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
+        [KeyboardButton("🚌 Индивидуальный трансфер минивэн\nЙ-Ола ➡️ Казань Аэропорт", web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
+        [KeyboardButton("🌍 Трансфер в любой город РФ минивэн",                        web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
+    ], resize_keyboard=True)
 
 async def post_init(app):
     await app.bot.delete_webhook(drop_pending_updates=True)
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "🚗 <b>Трансфер Йошкар-Ола — Казань</b>\n\n"
-        "Выберите нужный раздел:"
+    await update.message.reply_text(
+        "👋 Выберите тип заявки:",
+        reply_markup=main_menu()
     )
-    await update.message.reply_text(text, parse_mode="HTML", reply_markup=main_menu())
 
 async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     raw = update.message.web_app_data.data
@@ -73,7 +71,7 @@ async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     elif t == "rent":
         lines = [
-            "🚐 <b>НОВАЯ ЗАЯВКА — Индивидуальный трансфер</b>", "",
+            "🚌 <b>НОВАЯ ЗАЯВКА — Индивидуальный трансфер</b>", "",
             f"🚗 <b>Класс:</b> {d.get('car_class','')}",
             f"🛣 <b>Маршрут:</b> {d.get('route','')}",
             f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
@@ -120,7 +118,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp))
-    logger.info("Бот запущен (inline-меню, 5 кнопок)...")
+    logger.info("Бот запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
