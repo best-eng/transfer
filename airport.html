@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Заказать индивидуальный трансфер минивэн</title>
+<title>Заказать трансфер в аэропорт</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{--bg:#1c1c1e;--inp:#3a3a3c;--acc:#0a84ff;--txt:#fff;--sub:#aeaeb2;--brd:#48484a}
@@ -39,9 +39,9 @@ h1{font-size:20px;font-weight:700;margin-bottom:3px;line-height:1.3}
 </style>
 </head>
 <body>
-<h1>🚐 Заказать индивидуальный трансфер минивэн</h1>
-<p class="sub">Й-Ола ↔ Казань Аэропорт</p>
-<div class="field"><label>🚐 Класс автомобиля</label><div class="seg"><input type="radio" name="r_car" id="r_car1" value="Минивен Комфорт"><label for="r_car1">🚐 Комфорт</label><input type="radio" name="r_car" id="r_car2" value="Минивен Бизнес"><label for="r_car2">💼 Бизнес</label></div></div><div class="field"><label>🗺 Маршрут</label><select id="r_route"><option value="">Выберите маршрут</option><option>Йошкар-Ола → Казань (Аэропорт)</option><option>Казань (Аэропорт) → Йошкар-Ола</option><option>Йошкар-Ола → Казань (центр)</option><option>Казань (центр) → Йошкар-Ола</option></select></div><div class="field"><label>📅 Дата</label><div id="calWrap"></div></div><div class="field"><label>🕐 Время подачи</label><input type="time" id="r_time"></div><div class="field"><label>👥 Количество пассажиров</label><div class="seg"><input type="radio" name="r_seats" id="r_seats1" value="1"><label for="r_seats1">1</label><input type="radio" name="r_seats" id="r_seats2" value="2"><label for="r_seats2">2</label><input type="radio" name="r_seats" id="r_seats3" value="3"><label for="r_seats3">3</label><input type="radio" name="r_seats" id="r_seats4" value="4"><label for="r_seats4">4</label><input type="radio" name="r_seats" id="r_seats5" value="5"><label for="r_seats5">5</label><input type="radio" name="r_seats" id="r_seats6" value="6"><label for="r_seats6">6</label><input type="radio" name="r_seats" id="r_seats7" value="7"><label for="r_seats7">7</label><input type="radio" name="r_seats" id="r_seats8" value="8"><label for="r_seats8">8</label></div></div><div class="field"><label>📞 Ваш номер телефона</label><input type="tel" id="r_phone" placeholder="+7 (999) 000-00-00"></div><div class="field"><label>💬 Комментарий (если есть)</label><textarea id="r_com" placeholder="..."></textarea></div>
+<h1>✈️ Заказать трансфер в аэропорт</h1>
+<p class="sub">Й-Ола ↔ Казань Аэропорт (поштучно)</p>
+<div class="field"><label>🗺 Маршрут</label><select id="a_route"><option value="">Выберите маршрут</option><option>Йошкар-Ола → Казань (Аэропорт)</option><option>Казань (Аэропорт) → Йошкар-Ола</option></select></div><div class="field"><label>📅 Дата</label><div id="calWrap"></div></div><div class="field"><label>🕐 Время подачи</label><input type="time" id="a_time"></div><div class="field"><label>👥 Количество мест</label><div class="seg"><input type="radio" name="a_seats" id="a_seats1" value="1"><label for="a_seats1">1</label><input type="radio" name="a_seats" id="a_seats2" value="2"><label for="a_seats2">2</label><input type="radio" name="a_seats" id="a_seats3" value="3"><label for="a_seats3">3</label><input type="radio" name="a_seats" id="a_seats4" value="4"><label for="a_seats4">4</label><input type="radio" name="a_seats" id="a_seats5" value="5"><label for="a_seats5">5</label><input type="radio" name="a_seats" id="a_seats6" value="6"><label for="a_seats6">6</label><input type="radio" name="a_seats" id="a_seats7" value="7"><label for="a_seats7">7</label><input type="radio" name="a_seats" id="a_seats8" value="8"><label for="a_seats8">8</label></div></div><div class="field"><label>📞 Ваш номер телефона</label><input type="tel" id="a_phone" placeholder="+7 (999) 000-00-00"></div><div class="field"><label>💬 Комментарий (если есть)</label><textarea id="a_com" placeholder="..."></textarea></div>
 <button class="btn-submit" id="sbtn">ОТПРАВИТЬ ЗАЯВКУ</button>
 <div class="toast" id="toast"></div>
 <script>
@@ -90,19 +90,17 @@ window.addEventListener('DOMContentLoaded',function(){
   calInit();
   document.getElementById('sbtn').addEventListener('click',function(){
 
-    var car=radioVal('r_car');
-    var route=document.getElementById('r_route').value;
-    var date=calGetDate();var time=document.getElementById('r_time').value;
-    var seats=radioVal('r_seats');
-    var phone=document.getElementById('r_phone').value.trim();
-    var com=document.getElementById('r_com').value.trim();
-    if(!car)return toast('⚠️ Выберите класс автомобиля');
+    var route=document.getElementById('a_route').value;
+    var date=calGetDate();var time=document.getElementById('a_time').value;
+    var seats=radioVal('a_seats');
+    var phone=document.getElementById('a_phone').value.trim();
+    var com=document.getElementById('a_com').value.trim();
     if(!route)return toast('⚠️ Выберите маршрут');
     if(!date)return toast('⚠️ Выберите дату');
     if(!time)return toast('⚠️ Укажите время');
-    if(!seats)return toast('⚠️ Выберите количество пассажиров');
+    if(!seats)return toast('⚠️ Выберите количество мест');
     if(!phone)return toast('⚠️ Укажите телефон');
-    tg.sendData(JSON.stringify({type:'rent',car_class:car,route:route,date:date,time:time,seats:seats,phone:phone,comment:com}));
+    tg.sendData(JSON.stringify({type:'airport',route:route,date:date,time:time,seats:seats,phone:phone,comment:com}));
 
   });
 });

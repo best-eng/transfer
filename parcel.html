@@ -9,16 +9,16 @@
 :root{--bg:#1c1c1e;--inp:#3a3a3c;--acc:#0a84ff;--txt:#fff;--sub:#aeaeb2;--brd:#48484a}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px 16px 100px}
-h1{font-size:21px;font-weight:700;margin-bottom:3px}
+h1{font-size:20px;font-weight:700;margin-bottom:3px;line-height:1.3}
 .sub{font-size:13px;color:var(--sub);margin-bottom:22px}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .field input,.field textarea,.field select{width:100%;background:var(--inp);border:1.5px solid var(--brd);border-radius:12px;padding:13px 14px;color:var(--txt);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--acc)}
 .field textarea{resize:none;height:74px}
-.seg{display:flex;background:var(--inp);border-radius:12px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg{display:flex;background:var(--inp);border-radius:12px;padding:3px;gap:3px}
 .seg input{display:none}
-.seg label{flex:1;min-width:30px;text-align:center;padding:9px 3px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;color:var(--sub);transition:all .15s}
+.seg label{flex:1;min-width:28px;text-align:center;padding:9px 2px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;color:var(--sub);transition:all .15s}
 .seg input:checked+label{background:var(--acc);color:#fff}
 #calWrap{background:var(--inp);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden}
 .cal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--brd)}
@@ -40,8 +40,8 @@ h1{font-size:21px;font-weight:700;margin-bottom:3px}
 </head>
 <body>
 <h1>📦 Отправить посылку</h1>
-<p class="sub">Йошкар-Ола ↔ Казань</p>
-<div class="field"><label>🗺 Маршрут</label><select id="p_route"><option value="">Выберите маршрут</option><option>Йошкар-Ола → Казань (город)</option><option>Йошкар-Ола → Казань (Аэропорт)</option><option>Казань (Аэропорт) → Йошкар-Ола</option><option>Казань (город) → Йошкар-Ола</option></select></div><div class="field"><label>📅 Дата отправки</label><div id="calWrap"></div></div><div class="field"><label>🕐 Время</label><input type="time" id="p_time"></div><div class="field"><label>📦 Что передаём?</label><input type="text" id="p_what" placeholder="Документы, коробка 2кг..."></div><div class="field"><label>📞 Телефон отправителя</label><input type="tel" id="p_phone" placeholder="+7 (999) 000-00-00"></div><div class="field"><label>👤 Кому / детали получателя</label><textarea id="p_det" placeholder="Телефон получателя, адрес..."></textarea></div>
+<p class="sub">Й-Ола ↔ Казань</p>
+<div class="field"><label>🗺 Маршрут</label><select id="p_route"><option value="">Выберите маршрут</option><option>Йошкар-Ола → Казань (центр)</option><option>Йошкар-Ола → Казань (Аэропорт)</option><option>Казань (центр) → Йошкар-Ола</option><option>Казань (Аэропорт) → Йошкар-Ола</option></select></div><div class="field"><label>📅 Дата отправки</label><div id="calWrap"></div></div><div class="field"><label>🕐 Время</label><input type="time" id="p_time"></div><div class="field"><label>📦 Что передаём?</label><input type="text" id="p_what" placeholder="Документы, коробка 2кг..."></div><div class="field"><label>📞 Телефон отправителя</label><input type="tel" id="p_phone" placeholder="+7 (999) 000-00-00"></div><div class="field"><label>👤 Кому / детали получателя</label><textarea id="p_det" placeholder="Телефон получателя, адрес..."></textarea></div>
 <button class="btn-submit" id="sbtn">ОТПРАВИТЬ ЗАЯВКУ</button>
 <div class="toast" id="toast"></div>
 <script>
@@ -61,8 +61,7 @@ function calDraw(){
   DOW.forEach(function(d){h+='<div class="cal-dow">'+d+'</div>';});
   for(var i=0;i<dow;i++)h+='<div></div>';
   for(var d=1;d<=last.getDate();d++){
-    var dt=new Date(calY,calM,d);
-    var c='cal-d';
+    var dt=new Date(calY,calM,d);var c='cal-d';
     if(dt<today)c+=' past';
     else if(dt.toDateString()===today.toDateString())c+=' today';
     if(calSel&&dt.toDateString()===calSel.toDateString())c+=' sel';
@@ -76,8 +75,7 @@ function calDraw(){
   document.getElementById('cNext').addEventListener('click',function(e){e.preventDefault();calM++;if(calM>11){calM=0;calY++;}calDraw();});
   el.querySelectorAll('.cal-d:not(.past)').forEach(function(cell){
     cell.addEventListener('click',function(){
-      var day=parseInt(this.getAttribute('data-d'));
-      var dt=new Date(calY,calM,day);
+      var dt=new Date(calY,calM,parseInt(this.getAttribute('data-d')));
       if(dt<todayMidnight())return;
       calSel=dt;calDraw();
     });
@@ -93,8 +91,7 @@ window.addEventListener('DOMContentLoaded',function(){
   document.getElementById('sbtn').addEventListener('click',function(){
 
     var route=document.getElementById('p_route').value;
-    var date=calGetDate();
-    var time=document.getElementById('p_time').value;
+    var date=calGetDate();var time=document.getElementById('p_time').value;
     var what=document.getElementById('p_what').value.trim();
     var phone=document.getElementById('p_phone').value.trim();
     var det=document.getElementById('p_det').value.trim();
