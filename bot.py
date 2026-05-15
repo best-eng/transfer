@@ -1,109 +1,126 @@
 #!/usr/bin/env python3
 import json, logging
 from config import BOT_TOKEN, ADMIN_CHAT_IDS, WEBAPP_URL
-from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def kb():
-    return ReplyKeyboardMarkup([
-        [KeyboardButton("📦 Отправить посылку",             web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
-        [KeyboardButton("🔍 Найти поездку",                  web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
-        [KeyboardButton("✈️ Трансфер в аэропорт",            web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
-        [KeyboardButton("🚐 Индивидуальный трансфер",        web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
-        [KeyboardButton("🌍 Трансфер по РФ",                 web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
-    ], resize_keyboard=True)
+# ─── Inline-клавиатура с цветными эмодзи-кнопками ───────────────────────────
+def main_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔴 Отправить посылку",              web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
+        [InlineKeyboardButton("🔵 Найти поездку",                   web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
+        [InlineKeyboardButton("🟢 Трансфер в аэропорт",             web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
+        [InlineKeyboardButton("🟡 Индивидуальный трансфер",         web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
+        [InlineKeyboardButton("⚫ Трансфер по всей РФ",             web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
+    ])
 
 async def post_init(app):
     await app.bot.delete_webhook(drop_pending_updates=True)
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 <b>Трансфер Казань — Йошкар-Ола</b>\n\nВыберите тип заявки:",
-        parse_mode="HTML",
-        reply_markup=kb()
+    text = (
+        "🚗 <b>Трансфер Йошкар-Ола — Казань</b>\n\n"
+        "Выберите нужный раздел:"
     )
+    await update.message.reply_text(text, parse_mode="HTML", reply_markup=main_menu())
 
 async def webapp(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     raw = update.message.web_app_data.data
     logger.info("data: %s", raw)
-    try: d = json.loads(raw)
-    except: await update.message.reply_text("❌ Ошибка данных.", reply_markup=kb()); return
+    try:
+        d = json.loads(raw)
+    except Exception:
+        await update.message.reply_text("❌ Ошибка данных.", reply_markup=main_menu())
+        return
 
     user = update.effective_user
-    un = "@"+user.username if user.username else "нет username"
-    lnk = "tg://user?id="+str(user.id)
-    t = d.get("type","")
+    un   = "@" + user.username if user.username else "нет username"
+    lnk  = f"tg://user?id={user.id}"
+    t    = d.get("type", "")
 
     if t == "parcel":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Посылка</b>", "",
-                 "🛣 <b>Маршрут:</b> "+d.get("route",""),
-                 "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
-                 "📦 <b>Содержимое:</b> "+d.get("what",""),
-                 "📞 <b>Телефон:</b> "+d.get("phone","")]
-        if d.get("details"): lines.append("📝 <b>Детали:</b> "+d["details"])
-        lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
+        lines = [
+            "📦 <b>НОВАЯ ЗАЯВКА — Посылка</b>", "",
+            f"🛣 <b>Маршрут:</b> {d.get('route','')}",
+            f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
+            f"📦 <b>Содержимое:</b> {d.get('what','')}",
+            f"📞 <b>Телефон:</b> {d.get('phone','')}",
+        ]
+        if d.get("details"): lines.append(f"📝 <b>Детали:</b> {d['details']}")
 
     elif t == "trip":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Поездка (попутчики)</b>", "",
-                 "🛣 <b>Маршрут:</b> "+d.get("route",""),
-                 "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
-                 "👥 <b>Мест:</b> "+d.get("seats",""),
-                 "📞 <b>Телефон:</b> "+d.get("phone","")]
-        if d.get("comment"): lines.append("💬 "+d["comment"])
-        lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
+        lines = [
+            "🔍 <b>НОВАЯ ЗАЯВКА — Поездка</b>", "",
+            f"🛣 <b>Маршрут:</b> {d.get('route','')}",
+            f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
+            f"👥 <b>Мест:</b> {d.get('seats','')}",
+            f"📞 <b>Телефон:</b> {d.get('phone','')}",
+        ]
+        if d.get("comment"): lines.append(f"💬 {d['comment']}")
 
     elif t == "airport":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Трансфер в аэропорт</b>", "",
-                 "🛣 <b>Маршрут:</b> "+d.get("route",""),
-                 "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
-                 "👥 <b>Мест:</b> "+d.get("seats",""),
-                 "📞 <b>Телефон:</b> "+d.get("phone","")]
-        if d.get("comment"): lines.append("💬 "+d["comment"])
-        lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
+        lines = [
+            "✈️ <b>НОВАЯ ЗАЯВКА — Трансфер в аэропорт</b>", "",
+            f"🛣 <b>Маршрут:</b> {d.get('route','')}",
+            f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
+            f"👥 <b>Мест:</b> {d.get('seats','')}",
+            f"📞 <b>Телефон:</b> {d.get('phone','')}",
+        ]
+        if d.get("comment"): lines.append(f"💬 {d['comment']}")
 
     elif t == "rent":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Индивидуальный трансфер</b>", "",
-                 "🚐 <b>Класс:</b> "+d.get("car_class",""),
-                 "🛣 <b>Маршрут:</b> "+d.get("route",""),
-                 "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
-                 "👥 <b>Пассажиров:</b> "+d.get("seats",""),
-                 "📞 <b>Телефон:</b> "+d.get("phone","")]
-        if d.get("comment"): lines.append("💬 "+d["comment"])
-        lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
+        lines = [
+            "🚐 <b>НОВАЯ ЗАЯВКА — Индивидуальный трансфер</b>", "",
+            f"🚗 <b>Класс:</b> {d.get('car_class','')}",
+            f"🛣 <b>Маршрут:</b> {d.get('route','')}",
+            f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
+            f"👥 <b>Пассажиров:</b> {d.get('seats','')}",
+            f"📞 <b>Телефон:</b> {d.get('phone','')}",
+        ]
+        if d.get("comment"): lines.append(f"💬 {d['comment']}")
 
     elif t == "transfer_rf":
-        lines = ["🆕 <b>НОВАЯ ЗАЯВКА — Трансфер по РФ</b>", "",
-                 "🚐 <b>Класс:</b> "+d.get("car_class",""),
-                 "🛣 <b>Откуда:</b> "+d.get("from",""),
-                 "🛣 <b>Куда:</b> "+d.get("to",""),
-                 "📅 <b>Дата/время:</b> "+d.get("date","")+" "+d.get("time",""),
-                 "👥 <b>Пассажиров:</b> "+d.get("seats",""),
-                 "📞 <b>Телефон:</b> "+d.get("phone","")]
-        if d.get("comment"): lines.append("💬 "+d["comment"])
-        lines.append("👤 <b>От:</b> <a href=\'"+lnk+"\'>"+un+"</a>")
+        lines = [
+            "🌍 <b>НОВАЯ ЗАЯВКА — Трансфер по РФ</b>", "",
+            f"🚗 <b>Класс:</b> {d.get('car_class','')}",
+            f"🛣 <b>Откуда:</b> {d.get('from','')}",
+            f"🛣 <b>Куда:</b> {d.get('to','')}",
+            f"📅 <b>Дата/время:</b> {d.get('date','')} {d.get('time','')}",
+            f"👥 <b>Пассажиров:</b> {d.get('seats','')}",
+            f"📞 <b>Телефон:</b> {d.get('phone','')}",
+        ]
+        if d.get("comment"): lines.append(f"💬 {d['comment']}")
 
     else:
-        await update.message.reply_text("❌ Неизвестный тип.", reply_markup=kb()); return
+        await update.message.reply_text("❌ Неизвестный тип.", reply_markup=main_menu())
+        return
 
+    lines.append(f"\n👤 <b>От:</b> <a href=\'{lnk}\'>{un}</a>")
     msg = "\n".join(lines)
+
     ok = False
     for aid in ADMIN_CHAT_IDS:
         try:
             await ctx.bot.send_message(chat_id=aid, text=msg, parse_mode="HTML")
             ok = True
-        except Exception as e: logger.error("❌ %s: %s", aid, e)
+        except Exception as e:
+            logger.error("❌ admin %s: %s", aid, e)
 
-    txt = "✅ <b>Заявка принята!</b>\n\nДиспетчер свяжется с вами в ближайшее время." if ok else "⚠️ Ошибка отправки. Позвоните нам."
-    await update.message.reply_text(txt, parse_mode="HTML", reply_markup=kb())
+    reply = (
+        "✅ <b>Заявка принята!</b>\n\nДиспетчер свяжется с вами в ближайшее время."
+        if ok else
+        "⚠️ Ошибка отправки. Позвоните нам напрямую."
+    )
+    await update.message.reply_text(reply, parse_mode="HTML", reply_markup=main_menu())
 
 def main():
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp))
-    logger.info("Бот запущен (5 кнопок)...")
+    logger.info("Бот запущен (inline-меню, 5 кнопок)...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
