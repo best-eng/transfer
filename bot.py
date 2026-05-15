@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 
 def main_menu():
     return ReplyKeyboardMarkup([
-        [KeyboardButton("📦 Отправить посылку\nЙ-Ола ➡️ Казань",                     web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
-        [KeyboardButton("🔍 Найти поездку\nЙ-Ола ➡️ Казань (центр и аэропорт)",      web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
-        [KeyboardButton("✈️ Заказать трансфер в аэропорт\nЙ-Ола ➡️ Казань Аэропорт", web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
-        [KeyboardButton("🚌 Индивидуальный трансфер минивэн\nЙ-Ола ➡️ Казань Аэропорт", web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
+        [KeyboardButton("📦 Отправить посылку  Й-Ола ➡️ Казань",                      web_app=WebAppInfo(url=WEBAPP_URL+"/parcel.html"))],
+        [KeyboardButton("🔍 Найти поездку  Й-Ола ➡️ Казань",                          web_app=WebAppInfo(url=WEBAPP_URL+"/trip.html"))],
+        [KeyboardButton("✈️ Трансфер в аэропорт  Й-Ола ➡️ Казань",                    web_app=WebAppInfo(url=WEBAPP_URL+"/airport.html"))],
+        [KeyboardButton("🚌 Индивидуальный трансфер минивэн  Й-Ола ➡️ Казань",        web_app=WebAppInfo(url=WEBAPP_URL+"/rent.html"))],
         [KeyboardButton("🌍 Трансфер в любой город РФ минивэн",                        web_app=WebAppInfo(url=WEBAPP_URL+"/transfer_rf.html"))],
     ], resize_keyboard=True)
 
